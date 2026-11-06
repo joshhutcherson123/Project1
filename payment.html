@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<title>Thanh toán gói năm – Lumina</title>
+</head>
+<body>
+<div class="auth-page">
+  <aside class="auth-aside">
+    <a class="logo" href="dashboard.html"><i></i>Lumina</a>
+    <div>
+      <h2>Gói năm của bạn.</h2>
+      <div class="sum">
+        <div class="amount">2.000.000đ<small> / năm</small></div>
+        <ul>
+          <li>Mọi tính năng của gói Miễn phí</li>
+          <li>Bài giảng video và bài tập với giáo viên</li>
+          <li>Lộ trình học cụ thể</li>
+        </ul>
+      </div>
+    </div>
+    <span></span>
+  </aside>
+  <main class="auth-main">
+    <div class="auth-box">
+      <a class="back" href="dashboard.html">← Để sau, về trang học tập</a>
+      <h1>Thanh toán</h1>
+      <p class="lead">Nhập thông tin tài khoản ngân hàng và số điện thoại để hoàn tất.</p>
+      <form id="form" novalidate>
+        <div class="form-error" id="formError" role="alert" hidden></div>
+        <div class="field">
+          <label for="bank">Ngân hàng</label>
+          <select id="bank" required>
+            <option value="">Chọn ngân hàng</option>
+            <option>Vietcombank</option><option>VietinBank</option><option>BIDV</option><option>Agribank</option>
+            <option>Techcombank</option><option>MB Bank</option><option>ACB</option><option>VPBank</option>
+            <option>TPBank</option><option>Sacombank</option>
+          </select>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label for="holder">Tên chủ tài khoản</label>
+          <input type="text" id="holder" autocomplete="cc-name" required>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label for="account">Số tài khoản ngân hàng</label>
+          <input type="text" id="account" inputmode="numeric" autocomplete="off" required>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label for="phone">Số điện thoại</label>
+          <input type="text" id="phone" inputmode="tel" autocomplete="tel" placeholder="Ví dụ: 0912345678" required>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label class="agree"><input type="checkbox" id="agree"><span>Tôi đồng ý với <a href="#">Điều khoản</a> và <a href="#">Quyền riêng tư</a> của Lumina.</span></label>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <button class="btn solid" type="submit" id="submit">Xác nhận thanh toán</button>
+      </form>
+    </div>
+  </main>
+</div>
+
+<dialog id="done" aria-labelledby="doneTitle">
+  <div class="ok-ico"><svg viewBox="0 0 24 24" fill="none" stroke="#4d7a69" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h2 id="doneTitle">Thanh toán gói học thành công</h2>
+  <button class="btn solid" type="button" id="ok">Xác nhận</button>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="auth.js"></script>
+<script>
+(async () => {
+const u = await Auth.requireUser();
+  if (!u) return;
+if (u && u.plan === 'yearly') location.replace('dashboard.html');
+
+const f = document.getElementById('form'), submit = document.getElementById('submit');
+const formError = document.getElementById('formError'), dlg = document.getElementById('done');
+const bank = f.bank, holder = f.holder, account = f.account, phone = f.phone, agree = f.agree;
+
+// Số tài khoản chỉ nhận chữ số
+account.addEventListener('input', () => { account.value = account.value.replace(/\D/g, ''); });
+
+f.addEventListener('submit', async e => {
+  e.preventDefault();
+  formError.hidden = true;
+  const checks = [
+    [bank, bank.value !== '', 'Hãy chọn ngân hàng của bạn.'],
+    [holder, holder.value.trim().length >= 2, 'Hãy nhập tên chủ tài khoản.'],
+    [account, /^\d{6,19}$/.test(account.value), 'Số tài khoản cần từ 6 đến 19 chữ số.'],
+    [phone, /^(0|\+84)\d{9}$/.test(phone.value.replace(/[\s.-]/g, '')), 'Hãy nhập số điện thoại Việt Nam hợp lệ, ví dụ 0912345678.'],
+    [agree, agree.checked, 'Bạn cần đồng ý với điều khoản và quyền riêng tư để tiếp tục.']
+  ];
+  let ok = true;
+  checks.forEach(([el, valid, msg]) => { setError(el, valid ? '' : msg); ok = ok && valid; });
+  if (!ok) { checks.find(c => !c[1])[0].focus(); return; }
+
+  submit.disabled = true; submit.textContent = 'Đang xử lý thanh toán…';
+  try {
+    // Mock: KHÔNG lưu thông tin ngân hàng ở trình duyệt. Thực tế: chuyển sang cổng thanh toán (VNPay, MoMo, PayOS...).
+    await Auth.upgrade();
+    dlg.showModal();
+  } catch (err) {
+    formError.textContent = 'Thanh toán chưa thành công. Hãy thử lại.'; formError.hidden = false;
+    submit.disabled = false; submit.textContent = 'Xác nhận thanh toán';
+  }
+});
+
+dlg.addEventListener('cancel', e => e.preventDefault()); // phải bấm Xác nhận để tiếp tục
+document.getElementById('ok').addEventListener('click', () => { location.href = 'dashboard.html'; });
+})();
+</script>
+</body>
+</html>
