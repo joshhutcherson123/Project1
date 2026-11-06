@@ -92,9 +92,30 @@ header.scrolled{border-color:var(--line)}
 /* Pricing */
 .price-head{text-align:center}
 .price-head .sub{margin-inline:auto}
-.plans{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:24px;max-width:860px;margin:52px auto 0}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;max-width:1050px;margin:52px auto 0}
 .plan{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:40px 36px;display:flex;flex-direction:column}
 .plan.pro{background:#c4e7d7;color:var(--ink);border-color:#aedcc8}
+.plan.expert{
+
+  background-color: rgb(226, 232, 238);
+
+}
+
+.btn.premium{
+
+  background: rgb(45, 58, 71);
+  color: white;
+  transition: background .2s;
+
+
+}
+
+.btn.premium:hover{
+
+  background: rgb(92, 101, 110);
+
+}
+
 .plan h3{font-size:1.5rem}
 .amount{font-family:var(--serif);font-size:3.2rem;line-height:1;margin:18px 0 4px}
 .amount small{font-family:var(--sans);font-size:1rem;opacity:.7}
@@ -242,23 +263,35 @@ footer{padding:44px 0;border-top:1px solid var(--line);color:var(--muted);font-s
         <article class="plan">
           <h3>Miễn phí</h3>
           <div class="amount">0đ</div>
-          <p class="note">Dùng mãi mãi, không cần thẻ.</p>
+          <p class="note">Tiếp thu kiến thức khoa học tự nhiên song ngữ không cần trả phí</p>
           <ul>
             <li>Hệ thống kiến thức song ngữ (Chương trình phổ thông lớp 10, 11, 12)</li>
             <li>Hỏi đáp với AI</li>
           </ul>
-          <a class="btn" href="register.html?plan=free">Đăng ký miễn phí</a>
+          <a class="btn" href="register.html?plan=free">Học miễn phí</a>
         </article>
         <article class="plan pro">
-          <h3>Gói năm</h3>
-          <div class="amount">2tr<small> / năm</small></div>
+          <h3>Gói Pro</h3>
+          <div class="amount">1tr500<small> / tháng</small></div>
           <p class="note">Bao gồm toàn bộ tính năng của gói Miễn phí.</p>
           <ul>
             <li>Có hệ thống bài giảng và bài tập với giáo viên</li>
             <li>Có hệ thống lộ trình học cụ thể</li>
           </ul>
-          <a class="btn solid" href="register.html?plan=yearly">Đăng ký gói năm</a>
+          <a class="btn solid" href="register.html?plan=yearly">Đăng ký gói Pro</a>
         </article>
+
+        <article class="plan expert">
+          <h3>Gói Expert</h3>
+          <div class="amount">3tr<small> / tháng</small></div>
+          <p class="note">Bao gồm toàn bộ tính năng của gói Pro.</p>
+          <ul>
+            <li>Tích hợp thêm hệ thống học liệu, tài liệu học tập</li>
+            <li>AI thiết kế bài học dựa trên nhu cầu thực tế của người dùng</li>
+          </ul>
+          <a class="btn premium" href="register.html?plan=yearly">Đăng ký gói Expert</a>
+        </article>
+
       </div>
     </div>
   </section>
