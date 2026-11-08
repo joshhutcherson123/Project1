@@ -8,6 +8,7 @@ const sb = SUPABASE_URL.startsWith('https://') ? supabase.createClient(SUPABASE_
 if (!sb) console.error('Chưa cấu hình SUPABASE_URL trong auth.js');
 
 const Auth = (() => {
+  const PAID = ['yearly', 'yearly2']; // các gói trả phí
   const need = () => { if (!sb) throw new Error('Hệ thống chưa được cấu hình kết nối. Hãy điền SUPABASE_URL trong auth.js.'); };
   const vi = e => {
     const m = (e && e.message || '').toLowerCase();
@@ -26,16 +27,18 @@ const Auth = (() => {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return null;
     const { data: p } = await sb.from('profiles').select('full_name, plan, plan_expires_at').eq('id', session.user.id).maybeSingle();
-    const active = p && p.plan === 'yearly' && (!p.plan_expires_at || new Date(p.plan_expires_at) > new Date());
+    const active = p && PAID.includes(p.plan) && (!p.plan_expires_at || new Date(p.plan_expires_at) > new Date());
     return {
       name: (p && p.full_name) || (session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email,
       email: session.user.email,
-      plan: active ? 'yearly' : 'free'
+      plan: active ? p.plan : 'free'
     };
   }
 
   return {
     current: load,
+    isPaid: u => !!u && PAID.includes(u.plan),
+    planName: p => ({ yearly: 'Gói năm', yearly2: 'Gói năm nâng cao' }[p] || 'Miễn phí'),
     async register({ name, email, password }) {
       need();
       const { data, error } = await sb.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() } } });
@@ -47,11 +50,11 @@ const Auth = (() => {
       const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw new Error(vi(error));
     },
-    // DEMO: gọi hàm SQL demo_activate_yearly (xem supabase_setup.sql). Khi dùng cổng thanh toán thật, bỏ hàm này:
+    // DEMO: gọi hàm SQL demo_activate_plan (xem supabase_setup.sql). Giá do server quyết định theo mã gói. Khi dùng cổng thanh toán thật, bỏ hàm này:
     // server sẽ nâng gói sau khi cổng thanh toán xác nhận.
-    async upgrade() {
+    async upgrade(plan) {
       need();
-      const { error } = await sb.rpc('demo_activate_yearly');
+      const { error } = await sb.rpc('demo_activate_plan', { p_plan: plan });
       if (error) throw new Error(vi(error));
     },
     async logout() { if (sb) await sb.auth.signOut(); location.href = 'login.html'; },
