@@ -36,9 +36,9 @@ const u = await Auth.requireUser();
 if (u) {
   document.getElementById('hello').textContent = 'Xin chào, ' + u.name + '!';
   document.getElementById('email').textContent = u.email;
-  document.getElementById('plan').textContent = u.plan === 'yearly' ? 'Gói năm' : 'Miễn phí';
+  document.getElementById('plan').textContent = Auth.planName(u.plan) ? 'Gói năm' : 'Miễn phí';
 }
-if (u && u.plan !== 'yearly') {
+if (u && !Auth.isPaid(u)) {
   const up = document.createElement('a');
   up.className = 'btn solid'; up.href = 'payment.html'; up.textContent = 'Nâng cấp gói năm';
   document.getElementById('logout').before(up);
