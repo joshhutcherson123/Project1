@@ -53,8 +53,8 @@
           <legend style="font-weight:500;font-size:.92rem;margin-bottom:6px">Gói học</legend>
           <div class="plans-pick">
             <label><input type="radio" name="plan" value="free" checked><span>Miễn phí<small>0đ</small></span></label>
-            <label><input type="radio" name="plan" value="3months"><span>Gói năm<small>2tr / năm</small></span></label>
-            <label><input type="radio" name="plan" value="6months"><span>Gói năm<small>2tr / năm</small></span></label>
+            <label><input type="radio" name="plan" value="3months"><span>Gói năm<small>Giá / 3 tháng</small></span></label>
+            <label><input type="radio" name="plan" value="6months"><span>Gói năm<small>Giá / 6 tháng</small></span></label>
           </div>
         </fieldset>
         <button class="btn solid" type="submit" id="submit">Tạo tài khoản</button>
@@ -73,7 +73,7 @@ const f = document.getElementById('form');
 const formError = document.getElementById('formError'), submit = document.getElementById('submit');
 // Chọn sẵn gói theo ?plan= từ trang chủ
 const p = new URLSearchParams(location.search).get('plan');
-if (p === '3months' || p === '6months' || p === 'free') f.querySelector('input[name=plan][value=' + p + ']').checked = true;
+if (p === p === '6months' || p === '3 months' || p === 'free') f.querySelector('input[name=plan][value=' + p + ']').checked = true;
 
 f.addEventListener('submit', async e => {
   e.preventDefault();
