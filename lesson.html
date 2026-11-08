@@ -31,7 +31,7 @@
 (async () => {
 const u = await Auth.requireUser();
   if (!u) return;
-if (u) { document.getElementById('email').textContent = u.email; document.getElementById('plan').textContent = u.plan === 'yearly' ? 'Gói năm' : 'Miễn phí'; }
+if (u) { document.getElementById('email').textContent = u.email; document.getElementById('plan').textContent = Auth.planName(u.plan); }
 document.getElementById('logout').addEventListener('click', () => Auth.logout());
 
 const q = new URLSearchParams(location.search);
@@ -47,7 +47,7 @@ document.getElementById('vi').textContent = item.vi;
 
 // Khung video bài giảng (gói năm). Khi có video thật, thay nội dung .video bằng <video src="..."> hoặc <iframe>.
 const vid = document.getElementById('video');
-if (u && u.plan === 'yearly') {
+if (Auth.isPaid(u)) {
   vid.className = 'video'; vid.setAttribute('role', 'img'); vid.setAttribute('aria-label', 'Khung video bài giảng, chưa có video');
   vid.innerHTML = '<div class="play"></div><div><b>Video bài giảng · Lecture video</b><br>Video sẽ được cập nhật sớm</div>';
 } else {
