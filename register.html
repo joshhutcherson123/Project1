@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<title>Đăng ký – Lumina</title>
+</head>
+<body>
+<div class="auth-page">
+  <aside class="auth-aside">
+    <a class="logo" href="index.html"><i></i>Lumina</a>
+    <div>
+      <h2>Bắt đầu học khoa học song ngữ.</h2>
+      <p>Tạo tài khoản miễn phí để truy cập hệ thống kiến thức lớp 10, 11, 12 và hỏi đáp với AI.</p>
+    </div>
+    <span></span>
+  </aside>
+  <main class="auth-main">
+    <div class="auth-box">
+      <a class="back" href="index.html">← Về trang chủ</a>
+      <h1>Đăng ký</h1>
+      <p class="lead">Tạo tài khoản chỉ mất một phút.</p>
+      <form id="form" novalidate>
+        <div class="form-error" id="formError" role="alert" hidden></div>
+        <div class="field">
+          <label for="name">Họ và tên</label>
+          <input type="text" id="name" autocomplete="name" required>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label for="email">Email</label>
+          <input type="email" id="email" autocomplete="email" required>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label for="password">Mật khẩu</label>
+          <div class="pw">
+            <input type="password" id="password" autocomplete="new-password" required>
+            <button type="button" aria-pressed="false">Hiện</button>
+          </div>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <div class="field">
+          <label for="confirm">Nhập lại mật khẩu</label>
+          <input type="password" id="confirm" autocomplete="new-password" required>
+          <div class="err" aria-live="polite"></div>
+        </div>
+        <fieldset class="field" style="border:0">
+          <legend style="font-weight:500;font-size:.92rem;margin-bottom:6px">Gói học</legend>
+          <div class="plans-pick">
+            <label><input type="radio" name="plan" value="free" checked><span>Miễn phí<small>0đ</small></span></label>
+            <label><input type="radio" name="plan" value="3months"><span>Gói 3 tháng<small>Giá / 3 tháng</small></span></label>
+            <label><input type="radio" name="plan" value="6months"><span>Gói 6 tháng<small>Giá / 6 tháng</small></span></label>
+          </div>
+        </fieldset>
+        <button class="btn solid" type="submit" id="submit">Tạo tài khoản</button>
+      </form>
+      <p class="switch">Đã có tài khoản? <a href="login.html">Đăng nhập</a></p>
+    </div>
+  </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="auth.js"></script>
+<script>
+(async () => {
+if (await Auth.requireGuest()) return;
+bindPasswordToggle();
+const f = document.getElementById('form');
+const formError = document.getElementById('formError'), submit = document.getElementById('submit');
+// Chọn sẵn gói theo ?plan= từ trang chủ
+const p = new URLSearchParams(location.search).get('plan');
+if (p === p === '6months' || p === '3 months' || p === 'free') f.querySelector('input[name=plan][value=' + p + ']').checked = true;
+
+f.addEventListener('submit', async e => {
+  e.preventDefault();
+  formError.hidden = true;
+  const checks = [
+    [f.name, f.name.value.trim().length >= 2, 'Hãy nhập họ và tên của bạn.'],
+    [f.email, emailOk(f.email.value), 'Hãy nhập một địa chỉ email hợp lệ.'],
+    [f.password, f.password.value.length >= 8, 'Mật khẩu cần có ít nhất 8 ký tự.'],
+    [f.confirm, f.confirm.value === f.password.value && f.confirm.value !== '', 'Mật khẩu nhập lại chưa khớp.']
+  ];
+  let ok = true;
+  checks.forEach(([el, valid, msg]) => { setError(el, valid ? '' : msg); ok = ok && valid; });
+  if (!ok) { checks.find(c => !c[1])[0].focus(); return; }
+  submit.disabled = true; submit.textContent = 'Đang tạo tài khoản…';
+  try {
+    await Auth.register({name: f.name.value, email: f.email.value, password: f.password.value, plan: f.plan.value});
+    location.href = f.plan.value === 'yearly' ? 'payment.html' : 'dashboard.html';
+  } catch (err) {
+    formError.textContent = err.message; formError.hidden = false;
+    submit.disabled = false; submit.textContent = 'Tạo tài khoản';
+  }
+});
+})();
+</script>
+</body>
+</html>
