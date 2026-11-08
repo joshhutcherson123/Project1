@@ -37,7 +37,7 @@ h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.15;letter-spacin
 .err{color:var(--err);font-size:.86rem;margin-top:6px;min-height:0}
 .form-error{background:var(--err-soft);color:var(--err);padding:12px 16px;border-radius:12px;font-size:.92rem;margin-bottom:18px}
 .form-error[hidden]{display:none}
-.plans-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.plans-pick{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .plans-pick label{margin:0;cursor:pointer}
 .plans-pick input{position:absolute;opacity:0}
 .plans-pick span{display:block;padding:14px 16px;border:1.5px solid var(--line);border-radius:14px;background:var(--surface);font-weight:600;font-size:.95rem;transition:border-color .2s,background .2s}
