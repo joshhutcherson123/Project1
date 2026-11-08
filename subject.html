@@ -27,7 +27,7 @@
 (async () => {
 const u = await Auth.requireUser();
   if (!u) return;
-if (u) { document.getElementById('email').textContent = u.email; document.getElementById('plan').textContent = u.plan === 'yearly' ? 'Gói năm' : 'Miễn phí'; }
+if (u) { document.getElementById('email').textContent = u.email; document.getElementById('plan').textContent = Auth.planName(u.plan); }
 document.getElementById('logout').addEventListener('click', () => Auth.logout());
 
 const q = new URLSearchParams(location.search);
