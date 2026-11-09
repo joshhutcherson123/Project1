@@ -88,7 +88,7 @@ function showList() {
       });
       S.grades[grade].forEach(c => {
         const chap = el('section', 'chapter');
-        const h = el('h3', '', c.ch); h.append(el('small', '', c.vi)); chap.append(h);
+        const h = el('h3', '', c.ch); h.append(' ', el('small', '', c.vi)); chap.append(h); // dấu cách giữ khoảng cách kể cả khi thiếu CSS
         const ul = el('ul', 'lessons');
         c.items.forEach(i => {
           const li = el('li');
