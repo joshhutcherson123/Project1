@@ -12,38 +12,152 @@
 <body>
 <header class="app-top">
   <a class="logo" href="dashboard.html"><i></i>Lumina</a>
-  <div class="who">
-    <span id="email"></span>
-    <b class="badge" id="plan"></b>
-    <button class="btn" id="logout" type="button">Đăng xuất</button>
-  </div>
+  <div class="who"><span id="email"></span><b class="badge" id="plan"></b><button class="btn" id="logout" type="button">Đăng xuất</button></div>
 </header>
-<main class="app-main">
+
+<!-- Chế độ 1: trang chủ học tập + danh sách môn học (xếp dọc) -->
+<main class="app-main" id="listView" hidden>
   <h1 id="hello">Xin chào!</h1>
-  <p class="lead">Chọn môn học để bắt đầu. Mỗi bài đều có thuật ngữ tiếng Anh kèm giải thích tiếng Việt.</p>
-  <div class="grid3">
-    <a class="card m" href="subject.html?s=math" style="text-decoration:none"><h3>Toán · Math</h3><p>Lớp 10, 11, 12</p></a>
-    <a class="card p" href="subject.html?s=physics" style="text-decoration:none"><h3>Lý · Physics</h3><p>Lớp 10, 11, 12</p></a>
-    <a class="card c" href="subject.html?s=chemistry" style="text-decoration:none"><h3>Hóa · Chemistry</h3><p>Lớp 10, 11, 12</p></a>
-  </div>
+  <p class="lead">Chọn môn, khối lớp rồi chọn bài để bắt đầu học. Mỗi bài đều có thuật ngữ tiếng Anh kèm giải thích tiếng Việt.</p>
+  <nav class="tabs" id="jump" aria-label="Chuyển nhanh đến môn học"></nav>
+  <div id="subjects"></div>
 </main>
+
+<!-- Chế độ 2: nội dung một bài học (dashboard.html?s=...&g=...&l=...) -->
+<main class="lesson" id="lesson" hidden>
+  <p class="crumbs"><a href="dashboard.html">Trang học tập</a> / <a id="back" href="#"></a></p>
+  <h1 id="title"></h1>
+  <p class="vi-title" id="vi"></p>
+  <div id="video"></div>
+  <label class="toggle"><input type="checkbox" id="showVi"> Hiện nghĩa tiếng Việt ngay cạnh thuật ngữ</label>
+  <div id="body"></div>
+  <section id="gloss-wrap"><h2>Glossary · Bảng thuật ngữ</h2><table class="glossary"><thead><tr><th>English</th><th>Tiếng Việt</th></tr></thead><tbody id="gloss"></tbody></table></section>
+  <section class="practice" id="practice"><h2>Practice · Luyện tập</h2><p id="pq"></p><details><summary>Show answer · Xem đáp án</summary><p id="pa"></p></details></section>
+</main>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="auth.js"></script>
+<script src="lessons.js"></script>
 <script>
 (async () => {
 const u = await Auth.requireUser();
-  if (!u) return;
-if (u) {
-  document.getElementById('hello').textContent = 'Xin chào, ' + u.name + '!';
-  document.getElementById('email').textContent = u.email;
-  document.getElementById('plan').textContent = Auth.planName(u.plan) ? 'Gói năm' : 'Miễn phí';
-}
-if (u && !Auth.isPaid(u)) {
+if (!u) return;
+document.getElementById('email').textContent = u.email;
+document.getElementById('plan').textContent = Auth.planName(u.plan);
+document.getElementById('hello').textContent = 'Xin chào, ' + u.name + '!';
+if (!Auth.isPaid(u)) {
   const up = document.createElement('a');
   up.className = 'btn solid'; up.href = 'payment.html'; up.textContent = 'Nâng cấp gói năm';
   document.getElementById('logout').before(up);
 }
 document.getElementById('logout').addEventListener('click', () => Auth.logout());
+
+const q = new URLSearchParams(location.search);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+
+// Có ?s=&g=&l= hợp lệ thì hiện bài học; ngược lại hiện danh sách các môn (xếp dọc)
+const key = q.get('s'), S0 = SUBJECTS[key], g0 = q.get('g');
+const item0 = S0 && S0.grades[g0] && S0.grades[g0].flatMap(c => c.items).find(i => i.id === q.get('l') && i.body);
+if (item0) showLesson(S0, g0, item0); else showList();
+
+function showList() {
+  document.title = 'Trang học tập – Lumina';
+  document.getElementById('listView').hidden = false;
+  const jump = document.getElementById('jump'), wrap = document.getElementById('subjects');
+
+  Object.entries(SUBJECTS).forEach(([k, S]) => {
+    const link = el('a', '', S.name + ' · ' + S.en); link.href = '#' + k; jump.append(link);
+
+    const sec = el('section', 'subject-block'); sec.id = k;
+    const head = el('div', 'sub-head ' + S.cls);
+    head.append(el('h2', '', S.name + ' · ' + S.en), el('p', '', 'Chọn khối lớp, sau đó chọn bài để bắt đầu.'));
+    const tabs = el('div', 'tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Khối lớp ' + S.name);
+    const box = el('div');
+    sec.append(head, tabs, box); wrap.append(sec);
+
+    const grades = Object.keys(S.grades);
+    let grade = (key === k && grades.includes(g0)) ? g0 : grades[0];
+
+    const render = () => {
+      tabs.replaceChildren(); box.replaceChildren();
+      grades.forEach(gr => {
+        const b = el('button', '', 'Lớp ' + gr);
+        b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', gr === grade);
+        b.addEventListener('click', () => { grade = gr; render(); });
+        tabs.append(b);
+      });
+      S.grades[grade].forEach(c => {
+        const chap = el('section', 'chapter');
+        const h = el('h3', '', c.ch); h.append(el('small', '', c.vi)); chap.append(h);
+        const ul = el('ul', 'lessons');
+        c.items.forEach(i => {
+          const li = el('li');
+          const inner = i.body ? el('a') : el('div', 'soon');
+          if (i.body) inner.href = 'dashboard.html?s=' + k + '&g=' + grade + '&l=' + i.id;
+          const left = el('span'); left.append(el('b', '', i.t), el('span', 'vi', i.vi));
+          inner.append(left, el('span', i.body ? 'tag' : 'tag off', i.body ? 'Học ngay' : 'Sắp ra mắt'));
+          li.append(inner); ul.append(li);
+        });
+        chap.append(ul); box.append(chap);
+      });
+    };
+    render();
+  });
+
+  // Nội dung dựng bằng JS nên phải tự cuộn tới môn được chọn (vd: dashboard.html#physics)
+  const target = location.hash.length > 1 && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  if (target) target.scrollIntoView();
+}
+
+function showLesson(S, g, item) {
+  document.getElementById('lesson').hidden = false;
+  document.title = item.t + ' – Lumina';
+  const back = document.getElementById('back');
+  back.textContent = S.name + ' lớp ' + g; back.href = 'dashboard.html?s=' + key + '&g=' + g + '#' + key;
+  document.getElementById('title').textContent = item.t;
+  document.getElementById('vi').textContent = item.vi;
+
+  // Khung video bài giảng (gói năm). Khi có video thật, thay nội dung .video bằng <video src="..."> hoặc <iframe>.
+  const vid = document.getElementById('video');
+  if (Auth.isPaid(u)) {
+    vid.className = 'video'; vid.setAttribute('role', 'img'); vid.setAttribute('aria-label', 'Khung video bài giảng, chưa có video');
+    vid.innerHTML = '<div class="play"></div><div><b>Video bài giảng · Lecture video</b><br>Video sẽ được cập nhật sớm</div>';
+  } else {
+    vid.className = 'video locked';
+    vid.innerHTML = '<div><b>Video bài giảng dành cho gói năm</b><br>Nâng cấp để xem bài giảng cùng giáo viên.</div><a class="btn solid" href="payment.html">Nâng cấp gói năm</a>';
+  }
+
+  const terms = new Map();
+  // Chuyển chuỗi có {English|Tiếng Việt} thành các node an toàn (không dùng innerHTML)
+  function rich(parent, text) {
+    text.split(/(\{[^}]+\})/).forEach(part => {
+      const m = part.match(/^\{([^|]+)\|([^}]+)\}$/);
+      if (!m) { if (part) parent.append(document.createTextNode(part)); return; }
+      const s = document.createElement('span');
+      s.className = 't'; s.tabIndex = 0; s.dataset.vi = m[2]; s.textContent = m[1];
+      parent.append(s); terms.set(m[1].toLowerCase(), [m[1], m[2]]);
+    });
+  }
+  const body = document.getElementById('body');
+  item.body.forEach(b => {
+    const h = document.createElement('h2'); h.textContent = b.h;
+    const p = document.createElement('p'); rich(p, b.p);
+    body.append(h, p);
+  });
+  rich(document.getElementById('pq'), item.practice.q); rich(document.getElementById('pa'), item.practice.a);
+
+  const gloss = document.getElementById('gloss');
+  [...terms.values()].forEach(([en, vi]) => {
+    const tr = document.createElement('tr');
+    const a = document.createElement('td'), b = document.createElement('td');
+    a.textContent = en; b.textContent = vi; tr.append(a, b); gloss.append(tr);
+  });
+
+  const main = document.getElementById('lesson'), tg = document.getElementById('showVi');
+  try { tg.checked = localStorage.getItem('lumina_showvi') === '1'; } catch {}
+  const apply = () => { main.classList.toggle('show-vi', tg.checked); try { localStorage.setItem('lumina_showvi', tg.checked ? '1' : '0'); } catch {} };
+  tg.addEventListener('change', apply); apply();
+}
 })();
 </script>
 </body>
