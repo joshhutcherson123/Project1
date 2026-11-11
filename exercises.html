@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<title>Bài tập – Lumina</title>
+</head>
+<body>
+<header class="app-top">
+  <a class="logo" href="dashboard.html"><i></i>Lumina</a>
+  <nav class="app-nav" aria-label="Điều hướng chính">
+    <a href="dashboard.html">Lý thuyết</a>
+    <a href="exercises.html" aria-current="page">Bài tập</a>
+    <span class="nav-soon" title="Sắp ra mắt">Lộ trình học <small>Sắp ra mắt</small></span>
+  </nav>
+  <div class="who"><span id="email"></span><b class="badge" id="plan"></b><button class="btn" id="logout" type="button">Đăng xuất</button></div>
+</header>
+
+<!-- Chế độ 1: danh sách bài tập theo môn (xếp dọc) -->
+<main class="app-main" id="listView" hidden>
+  <h1>Bài tập</h1>
+  <p class="lead">Chọn môn, khối lớp rồi chọn bài để xem đề và lời giải bằng tiếng Anh, kèm giải thích tiếng Việt.</p>
+  <nav class="tabs" id="jump" aria-label="Chuyển nhanh đến môn học"></nav>
+  <div id="subjects"></div>
+</main>
+
+<!-- Chế độ 2: bài tập của một bài học (exercises.html?s=...&g=...&l=...) -->
+<div class="lesson-layout" id="exLayout" hidden>
+<aside class="toc" id="toc" aria-label="Mục lục bài tập"><p class="toc-title">Mục lục · Contents</p><ol id="tocList"></ol></aside>
+<main class="lesson" id="exMain">
+  <p class="crumbs"><a href="exercises.html">Bài tập</a> / <a id="back" href="#"></a></p>
+  <h1 id="title"></h1>
+  <p class="vi-title" id="vi"></p>
+  <a class="crumbs-link" id="theoryLink" href="dashboard.html">← Xem lý thuyết của bài này</a>
+  <div class="lang-mode" id="langMode" role="group" aria-label="Giải thích tiếng Việt" hidden><span>Giải thích tiếng Việt:</span><button type="button" data-mode="full">Đầy đủ</button><button type="button" data-mode="click">Bấm để xem</button><button type="button" data-mode="off">Tắt</button></div>
+  <div id="exList"></div>
+</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="auth.js"></script>
+<script src="lessons.js"></script>
+<script src="exercises.js"></script>
+<script>
+(async () => {
+const u = await Auth.requireUser();
+if (!u) return;
+const paid = Auth.isPaid(u);
+document.getElementById('email').textContent = u.email;
+document.getElementById('plan').textContent = Auth.planName(u.plan);
+if (!paid) {
+  const up = document.createElement('a');
+  up.className = 'btn solid'; up.href = 'payment.html'; up.textContent = 'Nâng cấp gói năm';
+  document.getElementById('logout').before(up);
+}
+document.getElementById('logout').addEventListener('click', () => Auth.logout());
+
+const q = new URLSearchParams(location.search);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
+
+// Chuyển chuỗi có {English|Tiếng Việt} thành các node an toàn (không dùng innerHTML)
+function rich(parent, text) {
+  text.split(/(\{[^}]+\})/).forEach(part => {
+    const m = part.match(/^\{([^|]+)\|([^}]+)\}$/);
+    if (!m) { if (part) parent.append(document.createTextNode(part)); return; }
+    const s = el('span', 't', m[1]); s.tabIndex = 0; s.dataset.vi = m[2]; parent.append(s);
+  });
+}
+// Khối tiếng Việt: hiển thị theo mức người học chọn (đầy đủ / bấm để xem / tắt)
+function viBlock(text) {
+  const box = el('div', 'vi-block');
+  const btn = el('button', 'vi-btn', 'Xem tiếng Việt'); btn.type = 'button';
+  const vp = el('p', 'vi-text'); rich(vp, text);
+  btn.addEventListener('click', () => { const open = box.classList.toggle('open'); btn.textContent = open ? 'Ẩn tiếng Việt' : 'Xem tiếng Việt'; });
+  box.append(btn, vp); return box;
+}
+
+const key = q.get('s'), S0 = SUBJECTS[key], g0 = q.get('g');
+const item0 = S0 && S0.grades[g0] && S0.grades[g0].flatMap(c => c.items).find(i => i.id === q.get('l'));
+if (item0) showExercises(S0, g0, item0); else showList();
+
+function showList() {
+  document.title = 'Bài tập – Lumina';
+  document.getElementById('listView').hidden = false;
+  const jump = document.getElementById('jump'), wrap = document.getElementById('subjects');
+  Object.entries(SUBJECTS).forEach(([k, S]) => {
+    const link = el('a', '', S.name + ' · ' + S.en); link.href = '#' + k; jump.append(link);
+    const sec = el('section', 'subject-block'); sec.id = k;
+    const head = el('div', 'sub-head ' + S.cls);
+    head.append(el('h2', '', S.name + ' · ' + S.en), el('p', '', 'Chọn khối lớp, sau đó chọn bài để xem bài tập.'));
+    const tabs = el('div', 'tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Khối lớp ' + S.name);
+    const box = el('div'); sec.append(head, tabs, box); wrap.append(sec);
+    const grades = Object.keys(S.grades);
+    let grade = (key === k && grades.includes(g0)) ? g0 : grades[0];
+    const render = () => {
+      tabs.replaceChildren(); box.replaceChildren();
+      grades.forEach(gr => {
+        const b = el('button', '', 'Lớp ' + gr); b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', gr === grade);
+        b.addEventListener('click', () => { grade = gr; render(); }); tabs.append(b);
+      });
+      S.grades[grade].forEach(c => {
+        const chap = el('section', 'chapter');
+        const h = el('h3', '', c.ch); h.append(' ', el('small', '', c.vi)); chap.append(h);
+        const ul = el('ul', 'lessons');
+        c.items.forEach(i => {
+          const has = !!(EXERCISES[[k, grade, i.id].join('-')] || []).length;
+          const li = el('li'), a = el('a');
+          a.href = 'exercises.html?s=' + k + '&g=' + grade + '&l=' + i.id;
+          const left = el('span'); left.append(el('b', '', i.t), el('span', 'vi', i.vi));
+          a.append(left, el('span', has ? 'tag' : 'tag off', has ? 'Có bài tập' : 'Sắp ra mắt'));
+          li.append(a); ul.append(li);
+        });
+        chap.append(ul); box.append(chap);
+      });
+    };
+    render();
+  });
+  const target = location.hash.length > 1 && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  if (target) target.scrollIntoView();
+}
+
+function showExercises(S, g, item) {
+  const lessonKey = [key, g, item.id].join('-');
+  const exs = EXERCISES[lessonKey] || [];
+  document.title = 'Bài tập: ' + item.t + ' – Lumina';
+  document.getElementById('exLayout').hidden = false;
+  const back = document.getElementById('back');
+  back.textContent = S.name + ' lớp ' + g; back.href = 'exercises.html?s=' + key + '&g=' + g + '#' + key;
+  document.getElementById('title').textContent = 'Exercises: ' + item.t;
+  document.getElementById('vi').textContent = 'Bài tập: ' + item.vi;
+  document.getElementById('theoryLink').href = 'dashboard.html?s=' + key + '&g=' + g + '&l=' + item.id;
+  const list = document.getElementById('exList');
+  const main = document.getElementById('exMain');
+
+  if (!exs.length) { // chưa có nội dung
+    document.getElementById('toc').hidden = true;
+    const empty = el('div', 'ex-empty');
+    empty.append(el('p', '', 'Bài tập của bài này đang được cập nhật. Bạn quay lại sau nhé!'));
+    const a = el('a', 'btn', '← Xem lý thuyết'); a.href = document.getElementById('theoryLink').href;
+    empty.append(a); list.append(empty);
+    return;
+  }
+
+  exs.forEach((ex, i) => {
+    const n = i + 1;
+    const card = el('section', 'ex-card'); card.id = 'ex-' + n;
+    card.append(el('h2', '', 'Exercise ' + n));
+    const qp = el('p'); rich(qp, ex.q); card.append(qp);
+    if (ex.qv) card.append(viBlock(ex.qv));
+
+    const sol = el('div', 'ex-sol');
+    if (paid) {
+      const det = el('details'); det.append(el('summary', '', 'Show solution · Xem lời giải'));
+      const out = el('div', 'ex-sol-body'); det.append(out);
+      det.addEventListener('toggle', async () => {
+        if (!det.open || det.dataset.loaded) return;
+        out.textContent = 'Đang tải lời giải…';
+        try { // Lời giải nằm trong Supabase, được bảo vệ bằng RLS (chỉ gói trả phí đọc được)
+          const { data, error } = await sb.from('exercise_solutions').select('solution, solution_vi').eq('exercise_key', lessonKey + '-' + n).maybeSingle();
+          if (error || !data) throw new Error('no solution');
+          out.textContent = '';
+          const sp = el('p'); rich(sp, data.solution); out.append(sp);
+          if (data.solution_vi) out.append(viBlock(data.solution_vi));
+          det.dataset.loaded = '1';
+        } catch { out.textContent = 'Chưa tải được lời giải. Hãy thử lại sau.'; }
+      });
+      sol.append(det);
+    } else {
+      const lock = el('div', 'locked-solution');
+      lock.append(el('p', '', 'Lời giải chi tiết dành cho học viên gói năm.'));
+      const up = el('a', 'btn solid', 'Nâng cấp gói năm'); up.href = 'payment.html'; lock.append(up);
+      sol.append(lock);
+    }
+    card.append(sol); list.append(card);
+  });
+
+  // Sidebar mục lục: Exercise 1, 2, ...
+  const tocList = document.getElementById('tocList');
+  const targets = exs.map((_, i) => ['ex-' + (i + 1), 'Exercise ' + (i + 1)]);
+  const links = targets.map(([id, label]) => {
+    const li = el('li'), a = el('a', '', label); a.href = '#' + id;
+    a.addEventListener('click', e => { e.preventDefault(); document.getElementById(id).scrollIntoView({behavior: 'smooth', block: 'start'}); });
+    li.append(a); tocList.append(li); return a;
+  });
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(entries => entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + en.target.id));
+    }), {rootMargin: '-10% 0px -75% 0px'});
+    targets.forEach(([id]) => io.observe(document.getElementById(id)));
+  }
+
+  // Chọn mức giải thích tiếng Việt (giống trang lý thuyết)
+  const modeBox = document.getElementById('langMode');
+  modeBox.hidden = false;
+  const modeBtns = modeBox.querySelectorAll('button');
+  const setMode = m => {
+    main.classList.remove('mode-full', 'mode-click', 'mode-off'); main.classList.add('mode-' + m);
+    modeBtns.forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+    try { localStorage.setItem('lumina_vimode', m); } catch {}
+  };
+  let saved = 'full'; try { saved = localStorage.getItem('lumina_vimode') || 'full'; } catch {}
+  modeBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  setMode(['full', 'click', 'off'].includes(saved) ? saved : 'full');
+}
+})();
+</script>
+</body>
+</html>
