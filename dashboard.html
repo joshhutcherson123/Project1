@@ -12,6 +12,11 @@
 <body>
 <header class="app-top">
   <a class="logo" href="dashboard.html"><i></i>Lumina</a>
+  <nav class="app-nav" aria-label="Điều hướng chính">
+    <a href="dashboard.html" aria-current="page">Lý thuyết</a>
+    <a href="exercises.html">Bài tập</a>
+    <span class="nav-soon" title="Sắp ra mắt">Lộ trình học <small>Sắp ra mắt</small></span>
+  </nav>
   <div class="who"><span id="email"></span><b class="badge" id="plan"></b><button class="btn" id="logout" type="button">Đăng xuất</button></div>
 </header>
 
@@ -24,16 +29,20 @@
 </main>
 
 <!-- Chế độ 2: nội dung một bài học (dashboard.html?s=...&g=...&l=...) -->
-<main class="lesson" id="lesson" hidden>
+<div class="lesson-layout" id="lessonLayout" hidden>
+<aside class="toc" id="toc" aria-label="Mục lục bài học"><p class="toc-title">Mục lục · Contents</p><ol id="tocList"></ol></aside>
+<main class="lesson" id="lesson">
   <p class="crumbs"><a href="dashboard.html">Trang học tập</a> / <a id="back" href="#"></a></p>
   <h1 id="title"></h1>
   <p class="vi-title" id="vi"></p>
   <div id="video"></div>
+  <div class="lang-mode" id="langMode" role="group" aria-label="Giải thích tiếng Việt" hidden><span>Giải thích tiếng Việt:</span><button type="button" data-mode="full">Đầy đủ</button><button type="button" data-mode="click">Bấm để xem</button><button type="button" data-mode="off">Tắt</button></div>
   <label class="toggle"><input type="checkbox" id="showVi"> Hiện nghĩa tiếng Việt ngay cạnh thuật ngữ</label>
   <div id="body"></div>
   <section id="gloss-wrap"><h2>Glossary · Bảng thuật ngữ</h2><table class="glossary"><thead><tr><th>English</th><th>Tiếng Việt</th></tr></thead><tbody id="gloss"></tbody></table></section>
-  <section class="practice" id="practice"><h2>Practice · Luyện tập</h2><p id="pq"></p><details><summary>Show answer · Xem đáp án</summary><p id="pa"></p></details></section>
+  <section class="practice" id="practice"><h2>Exercises · Bài tập</h2><p>Làm bài tập của bài này và xem lời giải bằng tiếng Anh, kèm giải thích tiếng Việt.</p><a class="btn solid" id="exLink" href="exercises.html">Đến trang bài tập →</a></section>
 </main>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="auth.js"></script>
@@ -110,7 +119,7 @@ function showList() {
 }
 
 function showLesson(S, g, item) {
-  document.getElementById('lesson').hidden = false;
+  document.getElementById('lessonLayout').hidden = false;
   document.title = item.t + ' – Lumina';
   const back = document.getElementById('back');
   back.textContent = S.name + ' lớp ' + g; back.href = 'dashboard.html?s=' + key + '&g=' + g + '#' + key;
@@ -138,13 +147,22 @@ function showLesson(S, g, item) {
       parent.append(s); terms.set(m[1].toLowerCase(), [m[1], m[2]]);
     });
   }
+  // Khối giải thích tiếng Việt cho từng đoạn (hiển thị theo mức người học chọn)
+  function viBlock(text) {
+    const box = document.createElement('div'); box.className = 'vi-block';
+    const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'vi-btn'; btn.textContent = 'Xem tiếng Việt';
+    const vp = document.createElement('p'); vp.className = 'vi-text'; vp.textContent = text;
+    btn.addEventListener('click', () => { const open = box.classList.toggle('open'); btn.textContent = open ? 'Ẩn tiếng Việt' : 'Xem tiếng Việt'; });
+    box.append(btn, vp); return box;
+  }
   const body = document.getElementById('body');
-  item.body.forEach(b => {
-    const h = document.createElement('h2'); h.textContent = b.h;
+  item.body.forEach((b, i) => {
+    const h = document.createElement('h2'); h.textContent = (i + 1) + '. ' + b.h; h.id = 'sec-' + (i + 1);
     const p = document.createElement('p'); rich(p, b.p);
     body.append(h, p);
+    if (b.v) body.append(viBlock(b.v));
   });
-  rich(document.getElementById('pq'), item.practice.q); rich(document.getElementById('pa'), item.practice.a);
+  document.getElementById('exLink').href = 'exercises.html?s=' + key + '&g=' + g + '&l=' + item.id;
 
   const gloss = document.getElementById('gloss');
   [...terms.values()].forEach(([en, vi]) => {
@@ -153,10 +171,40 @@ function showLesson(S, g, item) {
     a.textContent = en; b.textContent = vi; tr.append(a, b); gloss.append(tr);
   });
 
+  // Sidebar mục lục: các mục 1., 2., ... cùng bảng thuật ngữ và phần luyện tập
+  const tocList = document.getElementById('tocList');
+  const targets = [...document.querySelectorAll('#body h2')].map(h => [h.id, h.textContent]);
+  targets.push(['gloss-wrap', 'Glossary · Bảng thuật ngữ'], ['practice', 'Exercises · Bài tập']);
+  const links = targets.map(([id, label]) => {
+    const li = document.createElement('li'), a = document.createElement('a');
+    a.href = '#' + id; a.textContent = label;
+    a.addEventListener('click', e => { e.preventDefault(); document.getElementById(id).scrollIntoView({behavior: 'smooth', block: 'start'}); });
+    li.append(a); tocList.append(li); return a;
+  });
+  if ('IntersectionObserver' in window) { // tô sáng mục đang xem
+    const io = new IntersectionObserver(entries => entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + en.target.id));
+    }), {rootMargin: '-10% 0px -75% 0px'});
+    targets.forEach(([id]) => io.observe(document.getElementById(id)));
+  }
+
   const main = document.getElementById('lesson'), tg = document.getElementById('showVi');
   try { tg.checked = localStorage.getItem('lumina_showvi') === '1'; } catch {}
   const apply = () => { main.classList.toggle('show-vi', tg.checked); try { localStorage.setItem('lumina_showvi', tg.checked ? '1' : '0'); } catch {} };
   tg.addEventListener('change', apply); apply();
+
+  // Chọn mức giải thích tiếng Việt: đầy đủ / bấm để xem / tắt (chỉ hiện khi bài có bản tiếng Việt)
+  const modeBox = document.getElementById('langMode');
+  modeBox.hidden = !item.body.some(b => b.v);
+  const modeBtns = modeBox.querySelectorAll('button');
+  const setMode = m => {
+    main.classList.remove('mode-full', 'mode-click', 'mode-off'); main.classList.add('mode-' + m);
+    modeBtns.forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === m));
+    try { localStorage.setItem('lumina_vimode', m); } catch {}
+  };
+  let saved = 'full'; try { saved = localStorage.getItem('lumina_vimode') || 'full'; } catch {}
+  modeBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  setMode(['full', 'click', 'off'].includes(saved) ? saved : 'full');
 }
 })();
 </script>
