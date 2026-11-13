@@ -70,11 +70,13 @@ function rich(parent, text) {
     const s = el('span', 't', m[1]); s.tabIndex = 0; s.dataset.vi = m[2]; parent.append(s);
   });
 }
+// Tách văn bản theo dòng thành nhiều đoạn
+function paras(parent, text) { text.split('\n').forEach(line => { const p = el('p'); rich(p, line); parent.append(p); }); }
 // Khối tiếng Việt: hiển thị theo mức người học chọn (đầy đủ / bấm để xem / tắt)
 function viBlock(text) {
   const box = el('div', 'vi-block');
   const btn = el('button', 'vi-btn', 'Xem tiếng Việt'); btn.type = 'button';
-  const vp = el('p', 'vi-text'); rich(vp, text);
+  const vp = el('div', 'vi-text'); paras(vp, text);
   btn.addEventListener('click', () => { const open = box.classList.toggle('open'); btn.textContent = open ? 'Ẩn tiếng Việt' : 'Xem tiếng Việt'; });
   box.append(btn, vp); return box;
 }
@@ -149,7 +151,8 @@ function showExercises(S, g, item) {
     const n = i + 1;
     const card = el('section', 'ex-card'); card.id = 'ex-' + n;
     card.append(el('h2', '', 'Exercise ' + n));
-    const qp = el('p'); rich(qp, ex.q); card.append(qp);
+    if (ex.ref) card.append(el('p', 'ex-ref', ex.ref));
+    paras(card, ex.q);
     if (ex.qv) card.append(viBlock(ex.qv));
 
     const sol = el('div', 'ex-sol');
@@ -163,7 +166,7 @@ function showExercises(S, g, item) {
           const { data, error } = await sb.from('exercise_solutions').select('solution, solution_vi').eq('exercise_key', lessonKey + '-' + n).maybeSingle();
           if (error || !data) throw new Error('no solution');
           out.textContent = '';
-          const sp = el('p'); rich(sp, data.solution); out.append(sp);
+          paras(out, data.solution);
           if (data.solution_vi) out.append(viBlock(data.solution_vi));
           det.dataset.loaded = '1';
         } catch { out.textContent = 'Chưa tải được lời giải. Hãy thử lại sau.'; }
