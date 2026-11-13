@@ -63,9 +63,6 @@ if (await Auth.requireGuest()) return;
 bindPasswordToggle();
 const f = document.getElementById('form');
 const formError = document.getElementById('formError'), submit = document.getElementById('submit');
-// Chọn sẵn gói theo ?plan= từ trang chủ
-const p = new URLSearchParams(location.search).get('plan');
-if (p === p === '6months' || p === '3 months' || p === 'free') f.querySelector('input[name=plan][value=' + p + ']').checked = true;
 
 f.addEventListener('submit', async e => {
   e.preventDefault();
@@ -81,8 +78,7 @@ f.addEventListener('submit', async e => {
   if (!ok) { checks.find(c => !c[1])[0].focus(); return; }
   submit.disabled = true; submit.textContent = 'Đang tạo tài khoản…';
   try {
-    await Auth.register({name: f.name.value, email: f.email.value, password: f.password.value, plan: f.plan.value});
-    location.href = f.plan.value === 'yearly' ? 'payment.html' : 'dashboard.html';
+    await Auth.register({name: f.name.value, email: f.email.value, password: f.password.value});
   } catch (err) {
     formError.textContent = err.message; formError.hidden = false;
     submit.disabled = false; submit.textContent = 'Tạo tài khoản';
