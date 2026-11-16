@@ -7,38 +7,38 @@ const EXERCISES = {
   "math-10-logic": [
     {
       "ref": "SGK Toán 10 · Bài tập 1.1",
-      "q": "Which of the following sentences are statements (propositions)? (a) China is the most populous country in the world. (b) Which school do you attend? (c) No private work is allowed during class time. (d) I will hit the crossbar with my shot.",
+      "q": "Which of the following sentences are propositions? (a) China is the most populous country in the world. (b) Which school do you attend? (c) Do not do private work during class. (d) I will kick the ball so that it hits the crossbar.",
       "qv": "Trong các câu sau, câu nào là mệnh đề? (a) Trung Quốc là nước đông dân nhất thế giới. (b) Bạn học trường nào? (c) Không được làm việc riêng trong giờ học. (d) Tôi sẽ sút bóng trúng xà ngang."
     },
     {
       "ref": "SGK Toán 10 · Bài tập 1.2",
-      "q": "Decide whether each statement is true or false: (a) π > 10/3; (b) the equation 3x + 7 = 0 has a solution; (c) there is at least one number that equals 0 when added to itself; (d) 2022 is a composite number.",
-      "qv": "Xác định tính đúng sai của mỗi mệnh đề sau: (a) π > 10/3; (b) phương trình 3x + 7 = 0 có nghiệm; (c) có ít nhất một số mà cộng với chính nó bằng 0; (d) 2022 là hợp số."
+      "q": "Determine whether each of the following propositions is true or false: (a) π > 10/3; (b) the equation 3x + 7 = 0 has a solution; (c) there is at least one number which, when added to itself, equals 0; (d) 2022 is a composite number.",
+      "qv": "Xác định tính đúng sai của các mệnh đề: pi lớn hơn 10/3; phương trình 3x + 7 = 0 có nghiệm; có ít nhất một số cộng với chính nó bằng 0; 2022 là hợp số."
     },
     {
       "ref": "SGK Toán 10 · Bài tập 1.3",
-      "q": "Consider two sentences. P: “Triangle ABC is a right triangle.” Q: “Triangle ABC has an angle equal to the sum of the other two angles.” State the equivalence P ⇔ Q and decide whether it is true or false.",
-      "qv": "Cho hai câu sau. P: “Tam giác ABC là tam giác vuông.” Q: “Tam giác ABC có một góc bằng tổng hai góc còn lại.” Hãy phát biểu mệnh đề tương đương P ⇔ Q và xét tính đúng sai của mệnh đề này."
+      "q": "Consider the following two statements: P: “Triangle ABC is a right triangle”; Q: “Triangle ABC has one angle equal to the sum of the other two angles.” State the equivalence P ⇔ Q and determine its truth value.",
+      "qv": "Cho P: Tam giác ABC là tam giác vuông; Q: Tam giác ABC có một góc bằng tổng hai góc còn lại. Phát biểu mệnh đề tương đương và xét đúng sai."
     },
     {
       "ref": "SGK Toán 10 · Bài tập 1.4",
-      "q": "Write the converse of each implication and decide whether the implication and its converse are true. P: “If a natural number n ends in the digit 5, then n is divisible by 5.” Q: “If a quadrilateral ABCD is a rectangle, then its two diagonals are equal.”",
-      "qv": "Phát biểu mệnh đề đảo của mỗi mệnh đề kéo theo sau và xét tính đúng sai của mệnh đề đã cho và mệnh đề đảo. P: “Nếu số tự nhiên n có chữ số tận cùng là 5 thì n chia hết cho 5.” Q: “Nếu tứ giác ABCD là hình chữ nhật thì hai đường chéo của nó bằng nhau.”"
+      "q": "State the converse of each proposition and determine whether each converse is true or false. P: “If a natural number n has 5 as its last digit, then n is divisible by 5.” Q: “If quadrilateral ABCD is a rectangle, then its diagonals are equal.”",
+      "qv": "Phát biểu mệnh đề đảo của P và Q, sau đó xác định tính đúng sai."
     },
     {
       "ref": "SGK Toán 10 · Bài tập 1.5",
-      "q": "For real numbers a and b, let P be “a² < b²” and Q be “0 < a < b”. (a) State the implication P ⇒ Q. (b) State the converse of the implication in (a). (c) Decide whether each of the two implications is true or false.",
-      "qv": "Với hai số thực a và b, xét P: “a² < b²” và Q: “0 < a < b”. (a) Phát biểu mệnh đề P ⇒ Q. (b) Phát biểu mệnh đề đảo của mệnh đề ở câu (a). (c) Xét tính đúng sai của hai mệnh đề đó."
+      "q": "For two real numbers a and b, consider P: “a² < b²” and Q: “0 < a < b”. (a) State P ⇒ Q. (b) State the converse of the proposition in (a). (c) Determine the truth value of each proposition in (a) and (b).",
+      "qv": "Với hai số thực a, b, xét P: a bình phương nhỏ hơn b bình phương và Q: 0 nhỏ hơn a nhỏ hơn b. Hãy phát biểu mệnh đề kéo theo, mệnh đề đảo và xét đúng sai."
     },
     {
       "ref": "SGK Toán 10 · Bài tập 1.6",
-      "q": "Decide whether the statement Q: “∃n ∈ ℕ, n is divisible by n + 1” is true or false, and write its negation. (Here ℕ = {0, 1, 2, …}.)",
-      "qv": "Xác định tính đúng sai của mệnh đề Q: “∃n ∈ ℕ, n chia hết cho n + 1” và tìm mệnh đề phủ định của nó. (Ở đây ℕ = {0; 1; 2; …}.)"
+      "q": "Determine whether the following proposition is true or false, and find its negation: Q: “There exists n ∈ ℕ such that n is divisible by n + 1.”",
+      "qv": "Xác định tính đúng sai và tìm mệnh đề phủ định của Q: tồn tại số tự nhiên n chia hết cho n + 1."
     },
     {
       "ref": "SGK Toán 10 · Bài tập 1.7",
-      "q": "Use the symbols ∀ and ∃ to write the following statements. P: “Every natural number has a square greater than or equal to itself.” Q: “There is a real number that equals 0 when added to itself.”",
-      "qv": "Dùng kí hiệu ∀, ∃ để viết các mệnh đề sau. P: “Mọi số tự nhiên đều có bình phương lớn hơn hoặc bằng chính nó.” Q: “Có một số thực cộng với chính nó bằng 0.”"
+      "q": "Use the symbols ∀ and ∃ to write the following propositions: P: “Every natural number has a square greater than or equal to itself.” Q: “There is a real number which, when added to itself, equals 0.”",
+      "qv": "Dùng ký hiệu với mọi và tồn tại để viết hai mệnh đề đã cho."
     }
   ],
   "math-10-sets": [
@@ -67,12 +67,12 @@ const EXERCISES = {
     {
       "ref": "SGK Toán 10 · Bài tập 2.1",
       "q": "Which of the following are linear inequalities in two variables? (a) 2x + 3y > 6; (b) 2²x + y ≤ 0; (c) 2x² − y ≥ 1.",
-      "qv": "Bất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn? (a) 2x + 3y > 6; (b) 2²x + y ≤ 0; (c) 2x² − y ≥ 1."
+      "qv": "Bất phương trình nào sau đây là bất phương trình bậc nhất hai ẩn?"
     },
     {
       "ref": "SGK Toán 10 · Bài tập 2.2",
-      "q": "Show the solution region of each inequality on the coordinate plane: (a) 3x + 2y ≥ 300; (b) 7x + 20y < 0.",
-      "qv": "Biểu diễn miền nghiệm của mỗi bất phương trình sau trên mặt phẳng tọa độ: (a) 3x + 2y ≥ 300; (b) 7x + 20y < 0."
+      "q": "Represent the solution region of each inequality on the coordinate plane: (a) 3x + 2y ≥ 300; (b) 7x + 20y < 0.",
+      "qv": "Biểu diễn miền nghiệm của mỗi bất phương trình trên mặt phẳng tọa độ."
     },
     {
       "ref": "SGK Toán 10 · Bài tập 2.3",
