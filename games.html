@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<link rel="stylesheet" href="games.css">
+<title>Luyện tập với trò chơi – Lumina</title>
+<script>
+/* Menu dùng màu sáng như dashboard; chỉ khi vào chơi (URL có ?l=) mới đổi sang giao diện tối.
+   Đặt ở đây để trang không bị nháy sáng trước khi tối. */
+if (new URLSearchParams(location.search).get('l')) document.documentElement.classList.add('games');
+</script>
+</head>
+
+<body>
+<header class="app-top">
+  <a class="logo" href="dashboard.html"><i></i>Lumina</a>
+  <nav class="app-nav" aria-label="Điều hướng chính">
+    <a href="dashboard.html">Lý thuyết</a>
+    <a href="exercises.html">Bài tập</a>
+    <a href="games.html" aria-current="page">Luyện tập với trò chơi</a>
+    <span class="nav-soon" title="Sắp ra mắt">Lộ trình học <small>Sắp ra mắt</small></span>
+  </nav>
+  <div class="who"><span id="email"></span><b class="badge" id="plan"></b><button class="btn" id="logout" type="button">Đăng xuất</button></div>
+</header>
+
+<!-- Màn chơi: không có header, chỉ có nút này ở góc phải màn hình -->
+<a class="btn solid g-back" id="gBack" href="games.html">← Quay lại trang trò chơi</a>
+
+<!-- Chế độ 1: menu các trò chơi, xếp theo môn / lớp / chương / bài -->
+<main class="g-main" id="menuView" hidden>
+  <h1>Luyện tập với trò chơi</h1>
+  <p class="g-lead">Mỗi bài học có một trò chơi riêng gồm 3 dạng câu hỏi: nhập đáp án, chọn đáp án và nối kiến thức. Câu hỏi bằng tiếng Anh; bấm nút bóng đèn nếu cần gợi ý.</p>
+  <nav class="tabs" id="jump" aria-label="Chuyển nhanh đến môn học"></nav>
+  <div id="subjects"></div>
+</main>
+
+<!-- Chế độ 2: màn chơi (games.html?s=...&g=...&l=...) -->
+<main class="play" id="playView" hidden>
+  <p class="g-where" id="where"></p>
+  <h1 id="gTitle"></h1>
+  <p class="vi-title" id="gVi"></p>
+  <div id="stage"></div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="auth.js"></script>
+<script src="lessons.js"></script>
+<script src="games.js"></script>
+<script>
+(async () => {
+const u = await Auth.requireUser();
+if (!u) return;
+document.getElementById('email').textContent = u.email;
+document.getElementById('plan').textContent = Auth.planName(u.plan);
+if (!Auth.isPaid(u)) {
+  const up = document.createElement('a');
+  up.className = 'btn solid'; up.href = 'payment.html'; up.textContent = 'Nâng cấp gói năm';
+  document.getElementById('logout').before(up);
+}
+document.getElementById('logout').addEventListener('click', () => Auth.logout());
+
+const q = new URLSearchParams(location.search);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+// Điểm cao nhất lưu trong trình duyệt (theo từng tài khoản)
+const bestKey = k => 'lumina-game-best:' + u.email + ':' + k;
+const getBest = k => { try { const v = localStorage.getItem(bestKey(k)); return v === null ? null : +v; } catch (e) { return null; } };
+const setBest = (k, n) => { try { const b = getBest(k); if (b === null || n > b) localStorage.setItem(bestKey(k), n); } catch (e) {} };
+
+const skey = q.get('s'), g0 = q.get('g'), l0 = q.get('l');
+const S0 = SUBJECTS[skey];
+const item0 = S0 && S0.grades[g0] && S0.grades[g0].flatMap(c => c.items).find(i => i.id === l0);
+const gameKey0 = skey + '-' + g0 + '-' + l0;
+if (item0 && GAMES[gameKey0]) play(S0, skey, g0, item0, gameKey0); else showMenu();
+
+/* ============================ MENU ============================ */
+function showMenu() {
+  document.documentElement.classList.remove('games');
+  document.getElementById('menuView').hidden = false;
+  const jump = document.getElementById('jump'), wrap = document.getElementById('subjects');
+
+  Object.entries(SUBJECTS).forEach(([k, S]) => {
+    const link = el('a', '', S.name + ' · ' + S.en); link.href = '#' + k; jump.append(link);
+
+    const sec = el('section', 'g-subject'); sec.id = k;
+    const head = el('div', 'g-sub-head');
+    head.append(el('h2', '', S.name + ' · ' + S.en), el('p', '', 'Chọn khối lớp, sau đó chọn bài để chơi.'));
+    const tabs = el('div', 'tabs'); tabs.setAttribute('role', 'tablist'); tabs.setAttribute('aria-label', 'Khối lớp ' + S.name);
+    const box = el('div');
+    sec.append(head, tabs, box); wrap.append(sec);
+
+    const grades = Object.keys(S.grades);
+    let grade = grades[0];
+    const render = () => {
+      tabs.replaceChildren(); box.replaceChildren();
+      grades.forEach(gr => {
+        const b = el('button', '', 'Lớp ' + gr);
+        b.type = 'button'; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', gr === grade);
+        b.addEventListener('click', () => { grade = gr; render(); });
+        tabs.append(b);
+      });
+      S.grades[grade].forEach(c => {
+        const chap = el('section', 'g-chapter');
+        const h = el('h3', '', c.ch); h.append(' ', el('small', '', c.vi)); chap.append(h);
+        const ul = el('ul', 'g-cards');
+        c.items.forEach(i => {
+          const gk = k + '-' + grade + '-' + i.id, has = !!GAMES[gk];
+          const li = el('li');
+          const card = has ? el('a', 'g-card') : el('div', 'g-card off');
+          if (has) card.href = 'games.html?s=' + k + '&g=' + grade + '&l=' + i.id;
+          const meta = el('div', 'g-meta');
+          if (has) {
+            const best = getBest(gk);
+            meta.append(el('span', best === null ? '' : 'g-best', best === null ? GAMES[gk].length + ' câu · 3 dạng' : 'Điểm cao nhất: ' + best + '/' + GAMES[gk].length));
+          } else meta.append(el('span', '', 'Chưa có trò chơi'));
+          meta.append(el('span', has ? 'g-tag' : 'g-tag off', has ? 'Chơi ngay' : 'Sắp ra mắt'));
+          card.append(el('b', '', i.t), el('span', 'vi', i.vi), meta);
+          li.append(card); ul.append(li);
+        });
+        chap.append(ul); box.append(chap);
+      });
+    };
+    render();
+  });
+  const target = location.hash.length > 1 && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  if (target) target.scrollIntoView();
+}
+
+/* ============================ MÀN CHƠI ============================ */
+function play(S, k, g, item, gameKey) {
+  document.title = 'Trò chơi: ' + item.t + ' – Lumina';
+  document.getElementById('playView').hidden = false;
+  document.getElementById('where').textContent = S.name + ' · ' + S.en + ' — Lớp ' + g;
+  document.getElementById('gBack').href = 'games.html#' + k;
+  document.documentElement.classList.add('games');      // giao diện tối + ẩn header khi đang chơi
+  document.getElementById('gTitle').textContent = item.t;
+  document.getElementById('gVi').textContent = item.vi;
+  const stage = document.getElementById('stage');
+
+  const TYPE = { input: ['Type the answer', 'Nhập đáp án'], choice: ['Choose one', 'Chọn một đáp án'], match: ['Match the pairs', 'Nối kiến thức'] };
+  const BULB = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.6 11.9c.7.5 1.1 1.3 1.1 2.1V17h5v-.5c0-.8.4-1.6 1.1-2.1A6.5 6.5 0 0 0 12 2.5z"/></svg>';
+  const LETTERS = 'ABCDEFGH';
+
+  const shuffle = a => { const r = a.slice(); for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+  // So khớp đáp án nhập: bỏ hoa/thường, khoảng trắng, dấu nháy, mạo từ đầu câu, dấu chấm cuối; dấu phẩy thập phân = dấu chấm
+  const norm = s => String(s).toLowerCase().replace(/[“”"’‘']/g, '').replace(/[−–—]/g, '-').replace(/^\s*(a|an|the)\s+/, '').replace(/\s+/g, '').replace(/,/g, '.').replace(/[.!]+$/, '');
+
+  let state;
+  const newGame = () => {
+    state = { i: 0, done: false, qs: GAMES[gameKey].map(prep) };
+    renderQ();
+  };
+  function prep(src) {
+    const Q = { ...src, status: 'open', hint: false, correct: null };   // status: open | answered | hinted
+    if (src.type === 'input') Q.val = '';
+    if (src.type === 'choice') { Q.opts = shuffle(src.options.map((t, i) => ({ t, ok: i === 0 }))); Q.sel = null; }
+    if (src.type === 'match') {
+      let r; do { r = shuffle(src.pairs.map((p, i) => ({ t: p[1], i }))); } while (r.length > 2 && r.every((x, idx) => x.i === idx));
+      Q.right = r; Q.link = src.pairs.map(() => null); Q.pick = null;   // link[trái] = chỉ số vế phải đã nối
+    }
+    return Q;
+  }
+  const ready = Q => Q.type === 'input' ? Q.val.trim() !== '' : Q.type === 'choice' ? Q.sel !== null : Q.link.every(v => v !== null);
+  const grade = Q => {
+    if (Q.type === 'input') return Q.answers.some(a => norm(a) === norm(Q.val));
+    if (Q.type === 'choice') return Q.opts[Q.sel].ok;
+    return Q.link.every((v, i) => v === i);
+  };
+
+  function renderQ(focusId) {
+    const Q = state.qs[state.i], total = state.qs.length;
+    stage.replaceChildren();
+
+    const prog = el('div', 'p-progress');
+    const bar = el('div', 'p-bar'); bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-valuemin', 0); bar.setAttribute('aria-valuemax', total); bar.setAttribute('aria-valuenow', state.i);
+    const fill = el('i'); fill.style.width = (state.i / total * 100) + '%'; bar.append(fill);
+    prog.append(el('span', '', 'Question ' + (state.i + 1) + ' / ' + total), bar);
+
+    const card = el('section', 'q-card' + (Q.status === 'answered' ? (Q.correct ? ' ring-ok' : ' ring-bad') : '')); card.setAttribute('aria-label', 'Câu hỏi ' + (state.i + 1));
+    const locked = Q.status !== 'open';
+
+    // hàng đầu: loại câu hỏi + nút bóng đèn (hint)
+    const top = el('div', 'q-top');
+    const tl = el('span', 'q-type', TYPE[Q.type][0]); tl.append(el('small', '', TYPE[Q.type][1]));
+    const hb = el('button', 'hint-btn'); hb.type = 'button'; hb.innerHTML = BULB; hb.append(el('span', '', 'Hint'));
+    hb.setAttribute('aria-pressed', Q.hint);
+    hb.title = 'Dịch câu hỏi sang tiếng Việt và hiện đáp án';
+    hb.setAttribute('aria-label', 'Hint: dịch câu hỏi sang tiếng Việt và hiện đáp án');
+    hb.dataset.id = 'hint';
+    hb.addEventListener('click', () => {
+      if (Q.hint) return;
+      Q.hint = true;
+      if (Q.status === 'open') { Q.status = 'hinted'; Q.correct = false; Q.lockedAt = Date.now(); }   // dùng hint: không tính điểm
+      renderQ('next');
+    });
+    top.append(tl, hb);
+    card.append(top, el('h2', 'q-text', Q.q));
+
+    if (Q.hint) {
+      const vi = el('div', 'q-vi'); vi.append(el('small', '', 'Tiếng Việt'), el('span', '', Q.vi)); card.append(vi);
+    }
+
+    // phần trả lời theo loại câu
+    if (Q.type === 'input') card.append(buildInput(Q, locked));
+    if (Q.type === 'choice') card.append(buildChoice(Q, locked));
+    if (Q.type === 'match') card.append(buildMatch(Q, locked));
+
+    // đáp án: hiện khi dùng hint hoặc khi trả lời sai
+    if (Q.hint || (Q.status === 'answered' && !Q.correct)) card.append(buildAnswer(Q));
+
+    // phản hồi sau khi nộp / dùng hint, kèm giải thích tiếng Anh + tiếng Việt
+    const explain = fb => {
+      if (!Q.why && !Q.whyVi) return;
+      const ex = el('div', 'why-box');
+      if (Q.why) { const p = el('p', 'why'); p.append(el('b', '', 'Explanation: '), Q.why); ex.append(p); }
+      if (Q.whyVi) { const p = el('p', 'why vi'); p.append(el('b', '', 'Giải thích: '), Q.whyVi); ex.append(p); }
+      fb.append(ex);
+    };
+    if (Q.status === 'answered') {
+      const fb = el('div', 'q-feedback ' + (Q.correct ? 'ok' : 'bad')); fb.setAttribute('role', 'status');
+      fb.append(el('span', 'verdict', Q.correct ? '✓ Correct! Chính xác.' : '✗ Not quite. Chưa đúng, xem đáp án và giải thích bên dưới.'));
+      explain(fb);
+      card.append(fb);
+    } else if (Q.status === 'hinted') {
+      const fb = el('div', 'q-feedback info'); fb.setAttribute('role', 'status');
+      fb.append(el('span', 'verdict', 'Bạn đã dùng gợi ý nên câu này không được tính điểm.'));
+      explain(fb);
+      card.append(fb);
+    }
+
+    // nút Submit / Next question
+    const act = el('div', 'q-actions');
+    const main = el('button', 'btn solid'); main.type = 'button'; main.dataset.id = 'next';
+    const note = el('span', 'q-note');
+    if (Q.status === 'open') {
+      main.textContent = 'Submit'; main.disabled = !ready(Q); main.dataset.id = 'submit';
+      note.textContent = ready(Q) ? '' : ({ input: 'Nhập đáp án để bấm Submit.', choice: 'Chọn một đáp án để bấm Submit.', match: 'Nối hết các cặp để bấm Submit.' })[Q.type];
+      main.addEventListener('click', () => { if (!ready(Q)) return; Q.correct = grade(Q); Q.status = 'answered'; Q.lockedAt = Date.now(); renderQ('next'); });
+    } else {
+      main.classList.add('next');
+      main.textContent = state.i === total - 1 ? 'See results →' : 'Next question →';
+      main.addEventListener('click', () => {
+        if (Date.now() - (Q.lockedAt || 0) < 500) return;   // vừa hiện kết quả: chưa cho sang câu tiếp
+        if (state.i === total - 1) showResult(); else { state.i++; renderQ(); window.scrollTo({ top: 0 }); }
+      });
+    }
+    act.append(note, main);
+    card.append(act);
+
+    stage.append(prog, card);
+    if (focusId) { const f = stage.querySelector('[data-id="' + focusId + '"]'); if (f && !f.disabled) f.focus(); }
+    return main;
+  }
+
+  function buildInput(Q, locked) {
+    const inp = el('input', 'q-input'); inp.type = 'text'; inp.value = Q.val; inp.placeholder = 'Type your answer…';
+    inp.autocomplete = 'off'; inp.autocapitalize = 'off'; inp.spellcheck = false; inp.disabled = locked;
+    inp.setAttribute('aria-label', 'Your answer'); inp.dataset.id = 'inp';
+    if (Q.status === 'answered') inp.classList.add(Q.correct ? 'ok' : 'bad');
+    inp.addEventListener('input', () => {
+      Q.val = inp.value;
+      const sb = stage.querySelector('[data-id="submit"]'), nt = stage.querySelector('.q-note');
+      if (sb) sb.disabled = !ready(Q);
+      if (nt) nt.textContent = ready(Q) ? '' : 'Nhập đáp án để bấm Submit.';
+    });
+    inp.addEventListener('keydown', e => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();                       // không để Enter tiếp tục tác động lên nút Next vừa nhận focus
+      if (e.repeat) return;                     // giữ phím Enter không được tính nhiều lần
+      const sb = stage.querySelector('[data-id="submit"]'); if (sb && !sb.disabled) sb.click();
+    });
+    if (!locked) setTimeout(() => inp.focus(), 0);
+    return inp;
+  }
+
+  function buildChoice(Q, locked) {
+    const wrap = el('div', 'opts' + (locked ? ' locked' : '')); wrap.setAttribute('role', 'radiogroup'); wrap.setAttribute('aria-label', 'Đáp án');
+    Q.opts.forEach((o, i) => {
+      const lab = el('label', 'opt');
+      const r = el('input'); r.type = 'radio'; r.name = 'opt'; r.checked = Q.sel === i; r.disabled = locked; r.dataset.id = 'o' + i;
+      const mark = el('span', 'opt-mk');
+      if (Q.status === 'answered') {
+        if (o.ok) { lab.classList.add('ok'); mark.textContent = '✓'; }
+        else if (Q.sel === i) { lab.classList.add('bad'); mark.textContent = '✗'; }
+      } else if (Q.status === 'hinted') {
+        if (o.ok) { lab.classList.add('ok'); mark.textContent = '✓'; }
+      } else if (Q.sel === i) lab.classList.add('sel');
+      r.addEventListener('change', () => { Q.sel = i; renderQ('o' + i); });
+      lab.append(r, el('span', 'opt-l', LETTERS[i]), el('span', 'opt-t', o.t), mark);
+      wrap.append(lab);
+    });
+    return wrap;
+  }
+
+  function buildMatch(Q, locked) {
+    const wrap = el('div', 'match');
+    const L = el('div', 'm-col'), R = el('div', 'm-col');
+    L.append(el('span', 'm-col-title', 'Concept')); R.append(el('span', 'm-col-title', 'Match'));
+    const answered = Q.status === 'answered';
+    const mk = (side, i, text, num, state) => {
+      const b = el('button', 'm-item' + (num ? ' paired' : '') + (state ? ' ' + state : '')); b.type = 'button'; b.disabled = locked;
+      b.dataset.id = side + i;
+      b.setAttribute('aria-pressed', !!(Q.pick && Q.pick.side === side && Q.pick.i === i));
+      const n = el('span', 'm-n', num ? String(num) : ''); n.setAttribute('aria-hidden', 'true');
+      const tx = el('span', 'm-tx', text);
+      if (state) tx.append(el('span', '', state === 'ok' ? '  ✓' : '  ✗'));
+      b.append(n, tx);
+      if (num) b.setAttribute('aria-label', text + ' — paired with item ' + num);
+      b.addEventListener('click', () => { matchClick(Q, side, i); renderQ(side + i); });
+      return b;
+    };
+    Q.pairs.forEach((p, i) => {
+      const st = answered && Q.link[i] !== null ? (Q.link[i] === i ? 'ok' : 'bad') : '';
+      L.append(mk('L', i, p[0], Q.link[i] !== null ? i + 1 : 0, st));
+    });
+    Q.right.forEach(r => {
+      const owner = Q.link.indexOf(r.i);
+      const st = answered && owner > -1 ? (owner === r.i ? 'ok' : 'bad') : '';
+      R.append(mk('R', r.i, r.t, owner > -1 ? owner + 1 : 0, st));
+    });
+    wrap.append(L, R);
+    return wrap;
+  }
+  function matchClick(Q, side, i) {
+    if (Q.status !== 'open') return;
+    const free = (s, idx) => s === 'L' ? Q.link[idx] === null : Q.link.indexOf(idx) === -1;
+    if (Q.pick && Q.pick.side !== side) {            // đã chọn một vế, bấm vế còn lại -> nối cặp
+      const a = side === 'R' ? Q.pick.i : i, b = side === 'R' ? i : Q.pick.i;
+      const prevOwner = Q.link.indexOf(b); if (prevOwner > -1) Q.link[prevOwner] = null;
+      Q.link[a] = b; Q.pick = null; return;
+    }
+    if (!free(side, i)) {                            // bấm vào mục đã nối -> gỡ nối và chọn lại mục đó
+      if (side === 'L') Q.link[i] = null; else Q.link[Q.link.indexOf(i)] = null;
+      Q.pick = { side, i }; return;
+    }
+    Q.pick = (Q.pick && Q.pick.side === side && Q.pick.i === i) ? null : { side, i };
+  }
+
+  function buildAnswer(Q) {
+    const box = el('div', 'q-answer'); box.setAttribute('aria-label', 'Đáp án');
+    box.append(el('h4', '', 'Answer · Đáp án'));
+    if (Q.type === 'input') {
+      box.append(el('strong', '', Q.show));
+      if (Q.showVi) box.append(el('div', 'vi-note', '→ ' + Q.showVi));
+    } else if (Q.type === 'choice') {
+      const i = Q.opts.findIndex(o => o.ok);
+      box.append(el('strong', '', LETTERS[i] + '. ' + Q.opts[i].t));
+    } else {
+      const ul = el('ul');
+      Q.pairs.forEach(p => ul.append(el('li', '', p[0] + '  ↔  ' + p[1])));
+      box.append(ul);
+    }
+    return box;
+  }
+
+  function showResult() {
+    const total = state.qs.length, right = state.qs.filter(x => x.status === 'answered' && x.correct).length;
+    const hinted = state.qs.filter(x => x.status === 'hinted').length;
+    setBest(gameKey, right);
+    stage.replaceChildren();
+    const box = el('section', 'result');
+    const sc = el('div', 'score', String(right)); sc.append(el('small', '', ' / ' + total));
+    const ratio = right / total;
+    box.append(sc,
+      el('h2', '', ratio === 1 ? 'Excellent! Xuất sắc!' : ratio >= 0.6 ? 'Well done! Làm tốt lắm!' : 'Keep practising! Cố gắng thêm nhé!'),
+      el('p', 'sub', 'Bạn trả lời đúng ' + right + '/' + total + ' câu' + (hinted ? ', dùng gợi ý ở ' + hinted + ' câu.' : '.')));
+    const ul = el('ul', 'r-list');
+    state.qs.forEach((x, n) => {
+      const cls = x.status === 'hinted' ? 'hint' : x.correct ? 'ok' : 'bad';
+      const li = el('li', cls);
+      const st = el('span', 'st', cls === 'hint' ? '💡' : cls === 'ok' ? '✓' : '✗'); st.setAttribute('aria-hidden', 'true');
+      const tx = el('span'); tx.append(el('span', 'lab', (n + 1) + '. ' + TYPE[x.type][0] + ' — ' + (cls === 'hint' ? 'Used hint' : cls === 'ok' ? 'Correct' : 'Incorrect')), x.q);
+      li.append(st, tx); ul.append(li);
+    });
+    const acts = el('div', 'r-actions');
+    const again = el('button', 'btn solid', 'Play again'); again.type = 'button';
+    again.addEventListener('click', () => { newGame(); window.scrollTo({ top: 0 }); });
+    const menu = el('a', 'btn', 'Back to games'); menu.href = 'games.html#' + k;
+    acts.append(again, menu);
+    box.append(ul, acts);
+    stage.append(box);
+    window.scrollTo({ top: 0 });
+    again.focus();
+  }
+
+  newGame();
+}
+})();
+</script>
+</body>
+</html>
