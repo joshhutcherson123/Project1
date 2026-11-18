@@ -217,3 +217,17 @@ dialog .btn{width:100%}
 .lesson .ex-ref{color:var(--muted);font-size:.85rem;margin:-4px 0 12px}
 .ex-card p{margin-bottom:10px}
 .ex-sol-body p{margin-bottom:10px}
+
+/* Header ứng dụng: thêm khoảng cách giữa logo, menu và phần tài khoản (menu giờ có 4 mục) */
+.app-top{column-gap:20px}
+.app-nav a,.app-nav .nav-soon{white-space:nowrap}
+/* Máy tính bảng / màn hình hẹp: menu xuống hàng riêng như trên điện thoại để không tràn ngang */
+@media (min-width:761px) and (max-width:1100px){
+  .app-top{height:auto;flex-wrap:wrap;padding-top:12px;padding-bottom:4px}
+  .app-nav{order:3;width:100%;gap:22px;overflow-x:auto;padding:6px 0 4px}
+  .who span{display:none}
+}
+/* Phần tài khoản: nút và nhãn gói không xuống dòng; ẩn email để header (menu 4 mục) luôn vừa 1120px */
+.who{min-width:0}
+.who .btn,.who .badge{flex:none;white-space:nowrap}
+.who span{display:none}
