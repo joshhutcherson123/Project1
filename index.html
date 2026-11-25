@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://vdk-viber-runtime-prod.bot.botpress.host/edge/webchat.css" />
 <style>
 :root{color-scheme:light;
   --bg:#e6f3ee; --surface:#f6fcf9; --ink:#24343a; --muted:#4f656b;
@@ -361,6 +362,14 @@ function showTerm(){
   card.classList.remove('swap'); void card.offsetWidth; card.classList.add('swap');
 }
 card.addEventListener('click', showTerm);
+</script>
+<script src="https://vdk-viber-runtime-prod.bot.botpress.host/edge/webchat.js"></script>
+<script>
+  fetch("https://vdk-viber-runtime-prod.bot.botpress.host/edge/bots/2b259095-98e1-4272-8cbc-07e13dde99de/config")
+    .then((res) => res.json())
+    .then(({ webchat }) =>
+      VdkEdgeWebchat.mount({ ...webchat, mode: "bubble", baseUrl: "https://vdk-viber-runtime-prod.bot.botpress.host", botId: "2b259095-98e1-4272-8cbc-07e13dde99de" })
+    )
 </script>
 </body>
 </html>
