@@ -394,13 +394,5 @@ function play(S, k, g, item, gameKey) {
 }
 })();
 </script>
-<script src="https://vdk-viber-runtime-prod.bot.botpress.host/edge/webchat.js"></script>
-<script>
-  fetch("https://vdk-viber-runtime-prod.bot.botpress.host/edge/bots/2b259095-98e1-4272-8cbc-07e13dde99de/config")
-    .then((res) => res.json())
-    .then(({ webchat }) =>
-      VdkEdgeWebchat.mount({ ...webchat, mode: "bubble", baseUrl: "https://vdk-viber-runtime-prod.bot.botpress.host", botId: "2b259095-98e1-4272-8cbc-07e13dde99de" })
-    )
-</script>
 </body>
 </html>
